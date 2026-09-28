@@ -26,7 +26,9 @@ DBT_BIN = "/usr/local/airflow/dbt_venvs/podcasts/bin/dbt"
 
 @dag(
     dag_id="podcasts_ingest_dbt",
-    schedule="0 6 * * *",
+    # Agendamento desativado (ver .github/workflows/podcasts-ingest.yml): antes
+    # era "0 6 * * *". Só dispara manual.
+    schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["podcasts", "ingestao", "dbt"],

@@ -8,9 +8,13 @@ name: Ingestão de podcasts (SCD2 + dbt)
 # Roda diário; o runner é efêmero, a persistência vive no Turso (ver README >
 # "Por que dois stores").
 
+# Agendamento desativado (set/2026): projeto de portfólio, a cota de escrita do
+# Turso free estourou e não vale pagar pra manter a coleta rodando. O dashboard
+# segue lendo o último snapshot materializado no Turso. Pra retomar, descomente o
+# `schedule` abaixo e rode `gh workflow enable podcasts-ingest.yml`.
 on:
-  schedule:
-    - cron: "0 6 * * *" # 06:00 UTC = 03:00 BRT
+  # schedule:
+  #   - cron: "0 6 * * *" # 06:00 UTC = 03:00 BRT
   workflow_dispatch:
 
 jobs:

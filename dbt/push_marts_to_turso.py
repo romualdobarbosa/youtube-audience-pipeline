@@ -42,6 +42,15 @@ MARTS = [
 # (~16 colunas em latest_video_metrics).
 CHUNKSIZE = 50
 
+# video_growth tem 1 linha por vídeo por intervalo entre coletas — cresce todo dia
+# (~528 mil linhas após ~27 coletas, ~20 mil a mais a cada run) e reescrevê-lo
+# inteiro estourou a cota mensal de escrita do Turso. A página só usa o top 20 por
+# views_delta ("Picos"), então empurra só as maiores linhas; o mart completo segue
+# no dbt local. Se a página passar a usar mais, suba o LIMIT aqui.
+QUERIES = {
+    "video_growth": "SELECT * FROM video_growth ORDER BY views_delta DESC LIMIT 1000",
+}
+
 
 def main() -> None:
     if DB_BACKEND != "turso":
@@ -53,7 +62,7 @@ def main() -> None:
 
     with local.connect() as lconn:
         for mart in MARTS:
-            df = pd.read_sql(f"SELECT * FROM {mart}", lconn)
+            df = pd.read_sql(QUERIES.get(mart, f"SELECT * FROM {mart}"), lconn)
             df.to_sql(
                 mart,
                 remote,

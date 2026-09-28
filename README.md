@@ -165,8 +165,10 @@ Dashboard publicado em share.streamlit.io a partir deste repo:
   tem pacote (`ipython==9.11.0`) que exige Python≥3.12.
 - **Secrets** (painel da app, não commitado): `DB_BACKEND = "turso"`,
   `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — as mesmas credenciais usadas pelo
-  cron de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página
-  **Podcasts BR** ler ao vivo do mesmo banco que o Actions alimenta.
+  workflow de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página
+  **Podcasts BR** ler do mesmo banco que o Actions alimentava. A ingestão está
+  encerrada (ver [Status do projeto](#status-do-projeto)): a página mostra o
+  último snapshot, de 28/09/2026.
 - **Copa 2026**: não depende de secret nenhum — lê `data/copa2026.duckdb`, que é
   commitado no repo (exceção deliberada ao `*.duckdb` do `.gitignore`, ver linha
   correspondente). Dados históricos (janelas já no passado, coleta única — ver
@@ -179,8 +181,9 @@ Dashboard publicado em share.streamlit.io a partir deste repo:
 `airflow/` isola um segundo projeto Astro/Airflow que reimplementa as duas
 ingestões como DAGs, validadas rodando de ponta a ponta via `astro dev start`:
 
-- **`podcasts_ingest_dbt`** — mesmo cron (`0 6 * * *`) e mesmos passos do
-  `podcasts-ingest.yml`: ingestão → Turso → `dbt run`/`dbt test`.
+- **`podcasts_ingest_dbt`** — mesmos passos do `podcasts-ingest.yml`: ingestão →
+  Turso → `dbt run`/`dbt test`. Sem agendamento hoje (`schedule=None`); o cron
+  original era `0 6 * * *`.
 - **`copa2026_ingest_dbt`** — coleta única e retroativa, `schedule=None`,
   disparo manual pela UI (equivalente aos profiles `copa-ingest`/`copa-dbt`
   do `docker-compose.yml`).
@@ -191,12 +194,29 @@ aqui e é resolvido com uma venv por projeto, construída em build-time no
 `airflow/Dockerfile` (`dbt_venvs/podcasts` e `dbt_venvs/copa2026`), isoladas
 entre si e do ambiente principal do Airflow.
 
-**Não é o orquestrador em produção** — quem roda a ingestão de verdade hoje é o
+**Não foi o orquestrador em produção** — quem rodou a ingestão de verdade foi o
 GitHub Actions (`.github/workflows/podcasts-ingest.yml`, seção
 [Podcasts BR](#podcasts-br-segunda-análise-mesmo-pipeline) abaixo). Este projeto
 Astro fica rodando localmente (`cd airflow && astro dev start`) como uma segunda
 implementação da mesma orquestração — decisão de onde hospedar em produção
 ainda em aberto.
+
+## Status do projeto
+
+Projeto de portfólio, **finalizado**. A ingestão de podcasts ficou ativa de
+04/09 a 28/09/2026 (27 execuções, 26 com sucesso) e cumpriu o papel dela:
+provar que o pipeline funciona de ponta a ponta — YouTube API → SCD2 no Turso →
+dbt (run + testes da invariante SCD2) → marts → dashboard publicado — e que o
+SCD2 acumula histórico de verdade em coletas recorrentes.
+
+Depois disso o cron foi desativado de propósito: a cota de escrita do plano free
+do Turso estourou (o mart `video_growth` era reescrito inteiro todo dia, ~528 mil
+linhas na última execução) e não faz sentido pagar pra manter rodando um projeto
+de portfólio. O dashboard segue no ar, só de leitura, com o último snapshot
+(28/09/2026). Pra retomar: descomentar o `schedule` do workflow e rodar
+`gh workflow enable podcasts-ingest.yml`. `dbt/push_marts_to_turso.py` já foi
+ajustado pra empurrar só o top 1.000 do `video_growth`, o que reduz o volume
+diário de escrita pra ~60–80 mil linhas.
 
 ## Modelo de dados
 
@@ -244,11 +264,11 @@ dbt/                        # staging + marts da análise secundária (dbt-sqlit
 
 airflow/                        # projeto Astro/Airflow — orquestração alternativa (ver seção acima)
 └── dags/
-    ├── podcasts_ingest_dbt.py  # mesmo cron/passos do workflow abaixo
+    ├── podcasts_ingest_dbt.py  # mesmos passos do workflow abaixo (sem agendamento)
     └── copa2026_ingest_dbt.py  # disparo manual, mesma ingestão única
 
 .github/workflows/
-├── podcasts-ingest.yml  # cron diário: ingestão -> Turso -> dbt run/test -> push dos marts
+├── podcasts-ingest.yml  # ingestão -> Turso -> dbt run/test -> push dos marts (cron desativado, só manual)
 └── tests.yml            # pytest em todo push/PR
 ```
 
@@ -275,8 +295,9 @@ somam ~19,5 mil → minutos a ~1h. `src/database.py::upsert_videos_scd2_batch`
 ainda assim faz 1 SELECT por canal em vez de 1 por vídeo (o ganho real que deu
 pra conseguir) — lista de canais e o porquê de cada um em `src/config.py`.
 
-Roda automaticamente todo dia via **GitHub Actions**
-(`.github/workflows/podcasts-ingest.yml`, cron `0 6 * * *` + disparo manual),
+Rodou automaticamente todo dia via **GitHub Actions**
+(`.github/workflows/podcasts-ingest.yml`, cron `0 6 * * *`, hoje desativado —
+ver [Status do projeto](#status-do-projeto)),
 escrevendo direto num banco **Turso** — o runner do Actions é efêmero, não tem
 onde persistir um arquivo local entre execuções, e é assim que o SCD2 finalmente
 acumula histórico de verdade em vez de depender de coletas manuais esporádicas.
