@@ -55,7 +55,7 @@ def get_turso_credentials() -> tuple[str, str]:
 #
 # Top 5 por inscritos (de uma lista original de 19 — reduzido pra caber num cron
 # diário razoável rodando contra Turso: cada escrita é um round-trip de rede,
-# ~0.2s/vídeo mesmo em lote — ver README > "Por que dois stores" e o commit que
+# ~0.2s/vídeo mesmo em lote — ver docs/adr/0001-duckdb-vs-turso.md e o commit que
 # reduziu a lista. 19 canais = ~46 mil vídeos = horas por execução; os 5 abaixo =
 # ~19.500 vídeos = minutos. Os mais relevantes (mais inscritos) ficaram.
 CHANNELS: list[str] = [

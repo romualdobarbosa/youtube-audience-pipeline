@@ -5,8 +5,8 @@ name: Ingestão de podcasts (SCD2 + dbt)
 # validam a invariante SCD2. Os marts do dbt (dbt/push_marts_to_turso.py) também
 # são empurrados pro Turso como tabelas — dbt-sqlite só grava local, e sem esse
 # passo um consumidor remoto (dashboard no Streamlit Cloud) nunca veria os marts.
-# Roda diário; o runner é efêmero, a persistência vive no Turso (ver README >
-# "Por que dois stores").
+# Roda diário; o runner é efêmero, a persistência vive no Turso (ver
+# docs/adr/0001-duckdb-vs-turso.md).
 
 # Agendamento desativado (set/2026): projeto de portfólio, a cota de escrita do
 # Turso free estourou e não vale pagar pra manter a coleta rodando. O dashboard

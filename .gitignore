@@ -23,7 +23,7 @@ copa2026/dbt/.user.yml
 
 # Exceção: dados finais da Copa 2026 são históricos (janelas já no passado) e
 # não têm store gerenciado como o Turso dos podcasts — commitado estático pra
-# o Streamlit Cloud servir sem precisar reingerir (ver README > Streamlit Cloud).
+# o Streamlit Cloud servir sem precisar reingerir (ver docs/streamlit-cloud.md).
 !data/copa2026.duckdb
 
 # airflow / astro cli (logs/ já coberto acima)

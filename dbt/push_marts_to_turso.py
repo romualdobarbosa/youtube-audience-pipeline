@@ -1,10 +1,11 @@
 """Materializa os marts do dbt-sqlite (views locais) como tabelas no Turso.
 
 dbt-sqlite só grava no arquivo local (dbt/profiles.yml aponta sempre pra
-../data/youtube.db, venha ele de onde vier — ver README > "Por que dois
-stores"). Sem esse passo, um consumidor que lê Turso direto (DB_BACKEND=turso,
-caso do dashboard no Streamlit Cloud) nunca vê os marts: eles ficam presos no
-arquivo local, que morre junto com o runner do Actions ao fim de cada run.
+../data/youtube.db, venha ele de onde vier — ver
+docs/adr/0001-duckdb-vs-turso.md). Sem esse passo, um consumidor que lê Turso
+direto (DB_BACKEND=turso, caso do dashboard no Streamlit Cloud) nunca vê os
+marts: eles ficam presos no arquivo local, que morre junto com o runner do
+Actions ao fim de cada run.
 
 Só faz algo quando DB_BACKEND=turso; em modo local, src/pages já lê os marts
 direto de data/youtube.db (mesmo arquivo que o dbt grava ali), nada a empurrar.
@@ -36,8 +37,8 @@ MARTS = [
 ]
 
 # O custo real é por round-trip de rede (statement), não por linha — mesma
-# lição de src/database.py::upsert_videos_scd2_batch (ver README > "Por que
-# dois stores"). chunksize baixo o bastante pra não estourar o limite de
+# lição de src/database.py::upsert_videos_scd2_batch (ver
+# docs/adr/0001-duckdb-vs-turso.md). chunksize baixo o bastante pra não estourar o limite de
 # parâmetros por statement do SQLite/libSQL (999) mesmo no mart mais largo
 # (~16 colunas em latest_video_metrics).
 CHUNKSIZE = 50

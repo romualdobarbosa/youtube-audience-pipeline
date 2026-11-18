@@ -284,7 +284,7 @@ como nome/handle de canal) e fatos de snapshot (métricas coletadas repetidament
 longo do tempo — a diferença de desenho pro caso da Copa, que é uma coleta única).
 6 views analíticas (ranking, shorts vs. longos, cadência de upload, crescimento
 entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`). Modelo
-dimensional (2 dims SCD2 + 2 fatos de snapshot) documentado em `esquema.sql`.
+dimensional (2 dims SCD2 + 2 fatos de snapshot) documentado em `docs/esquema.sql`.
 
 **5 canais** (os mais relevantes por inscritos — Podpah, Flow Podcast,
 Inteligência Ltda, AchismosTV, TICARACATICAST), reduzido de uma lista original

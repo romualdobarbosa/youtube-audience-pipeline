@@ -1,4 +1,4 @@
--- DDL canônico do youtube_counter (documentação).
+-- DDL de referência do modelo dimensional dos podcasts (documentação).
 -- O schema real é criado em runtime pelo SQLAlchemy (database.init_db);
 -- este arquivo serve como referência legível do modelo dimensional.
 
