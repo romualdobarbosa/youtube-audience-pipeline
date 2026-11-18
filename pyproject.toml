@@ -1,0 +1,53 @@
+# src/requirements.txt é gerado daqui (hook uv-export do pre-commit): é o arquivo
+# que o Streamlit Community Cloud instala, por estar na pasta do src/dashboard.py.
+[project]
+name = "youtube-audience-pipeline"
+version = "0.1.0"
+description = "Pipeline de audiência do YouTube (ingestão, SCD2, dbt) e dashboard Streamlit da Copa 2026 e dos podcasts BR"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "duckdb==1.5.5",
+    "google-api-python-client==2.193.0",
+    "pandas==3.0.1",
+    "plotly==6.6.0",
+    "python-dotenv==1.2.2",
+    "sqlalchemy==2.0.48",
+    "sqlalchemy-libsql==0.2.0",
+    "streamlit==1.56.0",
+    "tenacity==9.1.4",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.7.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+# Os dois projetos dbt pinam dbt-core em versões incompatíveis entre si
+# (dbt-sqlite não acompanha o dbt-adapters novo), daí os grupos em conflito.
+# dbt-sqlite precisa de Python 3.11/3.12 (dbt-common quebra no 3.14).
+dbt-podcasts = [
+    "dbt-adapters==1.16.7",
+    "dbt-core==1.11.14",
+    "dbt-sqlite==1.10.0",
+]
+dbt-copa = [
+    "dbt-adapters==1.24.5",
+    "dbt-core==1.12.3",
+    "dbt-duckdb==1.11.0",
+]
+
+[tool.uv]
+package = false
+conflicts = [
+    [
+        { group = "dbt-podcasts" },
+        { group = "dbt-copa" },
+    ],
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

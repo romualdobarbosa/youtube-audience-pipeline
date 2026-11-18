@@ -27,8 +27,8 @@ services:
     profiles: ["ingest"]
 
   # dbt (podcasts) — transforma dim_channel/dim_video/fact_* em staging + marts.
-  # Roda depois do `ingest`. Versões de dbt fixas em dbt/requirements.txt,
-  # instaladas na hora (ver nota no Dockerfile sobre por que não ficam na imagem).
+  # Roda depois do `ingest`. Versões de dbt fixas no grupo dbt-podcasts do
+  # pyproject.toml, instaladas na hora (ver nota no Dockerfile sobre por que não ficam na imagem).
   # dbt/sync_replica.py roda antes do dbt run: em modo local é no-op (dbt já lê
   # data/youtube.db direto); em modo Turso (DB_BACKEND=turso no .env) espelha as
   # tabelas remotas pro arquivo local, porque dbt-sqlite só fala SQLite local.
@@ -37,7 +37,7 @@ services:
     build: .
     image: youtube-view-counter:latest
     command: >
-      sh -c "pip install -q -r dbt/requirements.txt &&
+      sh -c "uv sync -q --frozen --no-dev --no-cache --group dbt-podcasts &&
               python dbt/sync_replica.py &&
               cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
     env_file:
@@ -67,7 +67,7 @@ services:
     build: .
     image: youtube-view-counter:latest
     command: >
-      sh -c "pip install -q -r copa2026/dbt/requirements.txt &&
+      sh -c "uv sync -q --frozen --no-dev --no-cache --group dbt-copa &&
               cd copa2026/dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
     volumes:
       - ./data:/app/data:z

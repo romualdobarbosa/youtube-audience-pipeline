@@ -17,8 +17,8 @@ COPY --chown=astro:0 include/repo/ /usr/local/airflow/repo/
 ENV PYTHONPATH="/usr/local/airflow/repo:${PYTHONPATH}"
 
 # Uma venv por projeto dbt, isolada do ambiente principal do Airflow e uma da
-# outra — os dois pinam dbt-core em versões incompatíveis (ver
-# include/repo/dbt/requirements.txt e include/repo/copa2026/dbt/requirements.txt).
+# outra — os dois pinam dbt-core em versões incompatíveis (ver os grupos
+# dbt-podcasts e dbt-copa no pyproject.toml da raiz; as pins abaixo são as mesmas).
 # Construídas em build-time (não por task) por serem bem mais rápidas de usar
 # do que criar uma venv do zero a cada execução.
 RUN python -m venv /usr/local/airflow/dbt_venvs/podcasts && \

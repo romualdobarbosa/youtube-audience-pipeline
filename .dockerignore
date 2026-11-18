@@ -11,4 +11,3 @@ logs/
 models/
 .env
 *.md
-requirements.txt

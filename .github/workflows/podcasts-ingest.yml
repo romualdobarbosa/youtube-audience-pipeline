@@ -32,31 +32,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          # dbt-sqlite (dbt/requirements.txt) exige 3.11/3.12 — fixando aqui
-          # cobre os dois passos (ingestão não liga pra versão de Python).
+          # dbt-sqlite (grupo dbt-podcasts do pyproject.toml) exige 3.11/3.12 —
+          # fixando aqui cobre os dois passos (ingestão não liga pra versão de Python).
           python-version: "3.11"
-
-      - name: Instala dependências da ingestão
-        run: pip install -r requirements-docker.txt
+          enable-cache: true
 
       - name: Ingestão -> Turso
-        run: python -m src.main
-
-      - name: Instala dependências do dbt (podcasts)
-        run: pip install -r dbt/requirements.txt
+        run: uv run --locked --no-dev python -m src.main
 
       - name: Espelha Turso -> SQLite local (dbt-sqlite só lê arquivo local)
-        run: python dbt/sync_replica.py
+        run: uv run --locked --no-dev --group dbt-podcasts python dbt/sync_replica.py
 
       - name: dbt run + dbt test
-        run: cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir .
+        run: |
+          cd dbt
+          uv run --locked --no-dev --group dbt-podcasts dbt run --profiles-dir .
+          uv run --locked --no-dev --group dbt-podcasts dbt test --profiles-dir .
 
-      # O passo do dbt pode ter puxado outra versão de SQLAlchemy — reinstala
-      # pra garantir o par testado com sqlalchemy-libsql antes do push abaixo.
-      - name: Reinstala dependências enxutas
-        run: pip install -r requirements-docker.txt
-
+      # Sem o grupo dbt-podcasts o uv ressincroniza a venv só com o runtime do
+      # uv.lock (o mesmo SQLAlchemy testado com sqlalchemy-libsql).
       - name: Materializa os marts do dbt no Turso (dashboard remoto lê daqui)
-        run: python dbt/push_marts_to_turso.py
+        run: uv run --locked --no-dev python dbt/push_marts_to_turso.py

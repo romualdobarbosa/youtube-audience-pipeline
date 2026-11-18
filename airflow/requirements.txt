@@ -1,7 +1,8 @@
 # Astro Runtime includes the following pre-installed providers packages: https://www.astronomer.io/docs/astro/runtime-image-architecture#provider-packages
 #
 # dbt NÃO entra aqui de propósito: dbt/ e copa2026/dbt/ pinam dbt-core em
-# versões incompatíveis entre si (ver os dois requirements.txt) e dbt-core em
+# versões incompatíveis entre si (grupos dbt-podcasts e dbt-copa do
+# pyproject.toml da raiz) e dbt-core em
 # geral tende a conflitar com as pins do próprio Airflow. Cada um roda numa
 # venv própria, construída em build-time no Dockerfile (avaliei
 # astronomer-cosmos pra isso, mas achei um import circular determinístico
