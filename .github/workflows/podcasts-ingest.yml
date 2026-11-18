@@ -17,11 +17,14 @@ on:
   #   - cron: "0 6 * * *" # 06:00 UTC = 03:00 BRT
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   ingest-and-transform:
     runs-on: ubuntu-latest
     # Medido contra um Turso real: ~0.2s/vídeo (cada escrita é 1 round-trip de
-    # rede). Os 5 canais (~19,5 mil vídeos) ficam em minutos-a-1h em regime de
+    # rede). Os 5 canais (~19,9 mil vídeos) ficam em minutos-a-1h em regime de
     # cruzeiro; o 1º dia (tudo novo) fica mais perto de 2h. 240min de folga.
     timeout-minutes: 240
     env:
@@ -30,7 +33,7 @@ jobs:
       TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
       TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
