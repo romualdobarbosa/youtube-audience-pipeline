@@ -1,373 +1,173 @@
-# 🏆 Quem ganhou a guerra de relevância no YouTube brasileiro na Copa do Mundo 2026?
+# youtube-audience-pipeline
 
-> Pipeline de dados real: ingestão pela **YouTube Data API v3**, transformação em
-> **dbt**, persistida em **DuckDB**, servida num dashboard **Streamlit**. Aplicado a
-> uma pergunta datada e específica — CazéTV, GE TV, N Sports e TNT Sports Brasil,
-> quem dominou a Copa 2026 e quem segurou a audiência depois que ela acabou?
+Quem ganhou a Copa do Mundo 2026 no YouTube brasileiro, e quem segurou a audiência depois da final?
 
-**🔗 App publicado: [youtubeviewcounter.streamlit.app](https://youtubeviewcounter.streamlit.app/)**
+O nome do repo é genérico de propósito. É um pipeline de dados sobre a YouTube Data API v3 (ingestão, dbt e dashboard) que eu apliquei a duas análises, a Copa 2026 como análise principal e um ranking de podcasts brasileiros como segunda.
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
-![dbt](https://img.shields.io/badge/dbt-FF694B?logo=dbt&logoColor=white)
-![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?logo=duckdb&logoColor=black)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Airflow](https://img.shields.io/badge/Airflow-017CEE?logo=apacheairflow&logoColor=white)
-[![Testes](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml/badge.svg)](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml)
+> TL;DR (English). ELT pipeline on the YouTube Data API v3, applied to two analyses. The main one measures which of 4 Brazilian sports channels won the 2026 World Cup on YouTube (12,231 videos, one-off backfill into a flat DuckDB fact table, dbt-duckdb, Streamlit). The second one tracks 5 Brazilian podcast channels with daily loads on GitHub Actions into Turso, SCD Type 2 dimensions and dbt tests that check the SCD2 invariant. The orchestration was also re-implemented as Apache Airflow DAGs, validated locally. The project is finished and the dashboard stays online, read-only.
 
----
+[![CI](https://github.com/romualdobarbosa/youtube-audience-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/romualdobarbosa/youtube-audience-pipeline/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)
 
-## A pergunta
+O dashboard está publicado em **[youtubeviewcounter.streamlit.app](https://youtubeviewcounter.streamlit.app/)**. Ele roda no Streamlit Community Cloud, que põe o app pra dormir quando ninguém acessa, então pode aparecer uma tela pra acordar e ele leva alguns segundos pra carregar.
 
-Quatro canais brasileiros cobriram a Copa do Mundo 2026 no YouTube: **CazéTV**, **GE
-TV**, **N Sports** e **TNT Sports Brasil**. Quem realmente ganhou a atenção do
-público — e quem conseguiu segurar essa audiência depois que a bola parou de rolar?
+![Página da Copa 2026 no dashboard](docs/img/dashboard-copa2026.png)
 
-**A restrição que importa**: a YouTube Data API v3 (`channels.list`) só devolve
-totais **acumulados atuais** de inscritos/views — não existe endpoint público com
-série histórica. Não dá pra reconstruir uma curva de inscritos retroativa. Por isso
-a métrica usada aqui é **performance por vídeo publicado em 3 janelas de tempo**
-(cadência, views, engajamento, share of voice), não uma curva de crescimento:
+## Duas análises, dois jeitos de coletar
 
-| Janela   | Período                                    |
-| -------- | ------------------------------------------ |
-| Pré-Copa | 01/05/2026 – 10/06/2026                    |
-| Copa     | 11/06/2026 (abertura) – 19/07/2026 (final) |
-| Pós-Copa | 20/07/2026 – 31/08/2026                    |
+| | Copa 2026 (principal) | Podcasts BR (secundária) |
+| --- | --- | --- |
+| Coleta | Única e retroativa, as janelas já passaram | Recorrente, diária no GitHub Actions |
+| Modelo | Tabela fato flat, um vídeo por linha | Dimensões SCD2 e fatos de snapshot |
+| Store | DuckDB, arquivo commitado no repo | Turso (libSQL gerenciado) |
+| dbt | `dbt-duckdb` | `dbt-sqlite` sobre uma réplica local |
+
+Esse contraste é o ponto técnico do projeto. A mesma ingestão serve a um caso analítico de carga única e a um caso transacional que acumula histórico, e cada um ganhou o store que combina com o padrão de acesso (decisão em [ADR 0001](docs/adr/0001-duckdb-vs-turso.md)).
+
+## A pergunta da Copa
+
+Quatro canais brasileiros (CazéTV, GE TV, N Sports e TNT Sports Brasil) cobriram a Copa no YouTube. A API (`channels.list`) só devolve os totais acumulados de hoje, sem série histórica, então não dá pra reconstruir uma curva de inscritos. Por isso eu medi a performance dos vídeos publicados em três janelas:
+
+| Janela | Período |
+| --- | --- |
+| Pré-Copa | 01/05/2026 a 10/06/2026 |
+| Copa | 11/06/2026 (abertura) a 19/07/2026 (final) |
+| Pós-Copa | 20/07/2026 a 31/08/2026 |
 
 ## O resultado
 
-| Canal             | Share of voice (Copa) | Crescimento Copa vs Pré-Copa | Δ engajamento Pós vs Copa |
-| ----------------- | --------------------: | ---------------------------: | ------------------------: |
-| **CazéTV**        |            **94,9 %** |         **+1.077 %** (11,8×) |                   +0,0016 |
-| ge tv             |                 3,2 % |                      −54,8 % |                   −0,0003 |
-| TNT Sports Brasil |                 1,8 % |                      −35,3 % |                   −0,0062 |
-| N Sports          |                 0,1 % |                      −73,3 % |                   +0,0020 |
+| Canal | Share of voice (Copa) | Crescimento Copa vs Pré-Copa | Δ engajamento Pós vs Copa |
+| --- | ---: | ---: | ---: |
+| **CazéTV** | **94,9 %** | **+1.077 %** (11,8×) | +0,0016 |
+| ge tv | 3,2 % | −54,8 % | −0,0003 |
+| TNT Sports Brasil | 1,8 % | −35,3 % | −0,0062 |
+| N Sports | 0,1 % | −73,3 % | +0,0020 |
 
-**CazéTV varreu a Copa** — 94,9% de share of voice entre os 4 canais durante o
-torneio, um salto de quase 12× em relação ao período pré-Copa — e **segurou a
-liderança depois**: no Pós-Copa seu share subiu ainda mais (58% das views do grupo),
-enquanto os concorrentes voltaram a patamares parecidos com o pré-Copa. Números
-reais, gerados pelo pipeline abaixo — reproduza com os comandos na seção
-["Como rodar"](#como-rodar).
+A CazéTV ficou com 94,9% das views do grupo durante a Copa, quase 12 vezes o que fez no pré-Copa. Depois da final ela continuou na frente, com 58,2% das views do grupo no pós-Copa contra 44,1% no pré-Copa, e os outros três voltaram pra perto do patamar de antes. Os números saem dos marts `channel_window_comparison` e `channel_window_metrics` em `data/copa2026.duckdb`.
 
-<details>
-<summary>Por que não usei <code>search.list</code> (como o plano original previa)</summary>
+## Em números
 
-`search.list` com `publishedAfter`/`publishedBefore` custa **100 unidades por
-chamada** — pra 4 canais × 3 janelas, isso rapidamente vira milhares de unidades de
-cota (o limite diário padrão é 10.000). Em vez disso, a ingestão reaproveita duas
-funções que **já existiam** em `src/api.py`: `get_channel_full` (resolve o canal e a
-_uploads playlist_ numa chamada) e uma nova `get_playlist_video_ids_since`, que pagina
-a _uploads playlist_ via `playlistItems.list` (**1 unidade/chamada**) e para assim
-que encontra um vídeo mais antigo que o início da janela de análise — não pagina o
-catálogo inteiro de canais com anos de conteúdo. `videos.list` busca estatísticas em
-lotes de 50 (`get_videos_stats`, já existente). Resultado: a coleta real dos 4 canais
-(~9.200 vídeos na janela) custou uma fração da cota de `search.list` pra fazer a
-mesma coisa.
+| Métrica | Valor | De onde vem |
+| --- | --- | --- |
+| Vídeos na análise da Copa | 12.231 (4 canais, 01/05 a 31/08/2026) | `select count(*) from copa_videos` em `data/copa2026.duckdb` |
+| Share of voice da CazéTV na Copa | 94,9 % | `channel_window_comparison.copa_share_of_voice` no mesmo arquivo |
+| Vídeos de podcast monitorados | 19.892 em 5 canais | `dim_video where is_current = 1` no Turso, último snapshot de 28/09/2026 |
+| Snapshots de métricas de vídeo | 548.423 linhas | `fact_video_metrics` no Turso, mesmo snapshot |
+| Execuções da ingestão diária | 27 entre 04/09 e 28/09/2026, 26 com sucesso (25 agendadas, todas com sucesso, e 2 manuais, uma com falha) | `gh run list --workflow podcasts-ingest.yml` |
+| Linhas do mart `video_growth` na última carga | 528.531 | `video_growth` no Turso. Depois disso `push_marts_to_turso.py` passou a mandar só o top 1.000 (`LIMIT 1000`), mudança que não chegou a rodar porque o cron foi desligado |
+| Custo de uma escrita no Turso | ~0,2 s por vídeo | Medição da época, registrada em `src/config.py` e no workflow. Não reverifiquei |
+| Testes pytest | 13 | `make test` |
+| Nós do `dbt build` da Copa | 13 (3 modelos, 10 testes) | `make dbt-copa` |
+| Nós do `dbt build` dos podcasts | 27 (10 modelos, 17 testes) | `make dbt-podcasts` |
 
-</details>
+## Arquitetura
 
-## Escopo e limitações (o que este número é e o que não é)
+```mermaid
+flowchart LR
+    API[YouTube Data API v3]
 
-O 94,9% é **share of views entre 4 canais brasileiros de esporte no
-YouTube** — não é a fatia da CazéTV na audiência total da Copa. Duas
-fronteiras importam:
+    subgraph copa[Copa 2026, coleta única]
+        CI[copa2026/ingest.py] --> DDB[(DuckDB<br/>data/copa2026.duckdb)]
+        DDB --> DBTC[dbt-duckdb<br/>staging e marts]
+        DBTC --> DDB
+    end
 
-**1. O universo é o YouTube, não a Copa.** A verdadeira concorrência da
-CazéTV era a TV aberta (Globo, SBT). A GE TV, inclusive, concentrou a
-audiência digital dela no Globoplay — fora deste recorte. Então o número
-mede "quem dominou o YouTube entre quem apostou no YouTube", não "quem
-dominou a Copa". A CazéTV tinha os direitos integrais dos 104 jogos na
-plataforma; o resultado reflete essa aposta, não repercussão geral.
+    subgraph pod[Podcasts BR, coleta diária]
+        GHA[src/main.py<br/>no GitHub Actions] --> T[(Turso / libSQL<br/>dims SCD2 e fatos)]
+        T --> R[dbt/sync_replica.py<br/>réplica SQLite local]
+        R --> DBTP[dbt-sqlite<br/>staging e marts]
+        DBTP --> P[dbt/push_marts_to_turso.py]
+        P --> T
+    end
 
-**2. Medir o impacto real esbarra em fontes fechadas.** Responder "a
-CazéTV incomodou/superou a TV tradicional?" exigiria cruzar três tipos de
-dado heterogêneos, e a ingestão de dois deles é o gargalo real:
-
-| Fonte                           | O que traria                  | Por que fica de fora                                                                                                          |
-| ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| YouTube Data API                | Views/engajamento (grão fino) | ✅ já ingerido aqui                                                                                                           |
-| Ibope / Kantar                  | Audiência de TV aberta        | Proprietário, sem API — só números soltos na imprensa, em unidade incompatível (pontos da Grande SP × dispositivos nacionais) |
-| Social listening (X, Instagram) | Buzz / menções                | APIs pagas e travadas                                                                                                          |
-
-Por isso este projeto responde **uma pergunta que os dados sustentam de
-ponta a ponta** ("quem venceu no YouTube?") em vez de forçar um "índice de
-relevância" unificado a partir de métricas que não são comparáveis entre si.
-
-## Como funciona
-
-```
-YouTube Data API v3
-        │  src/api.py (cliente + retry/backoff, reaproveitado)
-        ▼
-copa2026/ingest.py  ──▶  data/copa2026.duckdb (tabela raw copa_videos, flat)
-        │
-        ▼  dbt (copa2026/dbt/)
-   staging: stg_copa_videos (classifica a janela Pré/Copa/Pós)
-   marts:   channel_window_metrics, channel_window_comparison
-        │
-        ▼
-src/dashboard.py (Streamlit)
+    API --> CI
+    API --> GHA
+    DDB --> ST[Streamlit<br/>src/dashboard.py]
+    T --> ST
 ```
 
-Coleta **única e retroativa** — as 3 janelas já estão no passado, não é preciso
-rodar a ingestão repetidamente. Por isso não há SCD2 aqui (isso existe na análise
-secundária, ver abaixo): é uma tabela fato flat, um vídeo por linha. A fronteira de
-cada janela (as datas) é regra de negócio e fica no dbt (`vars` em
-`copa2026/dbt/dbt_project.yml`) — mudar as janelas não exige recoletar nada, só
-`dbt run` de novo.
+O cliente da API (`src/api.py`) é o mesmo nas duas análises, com retry e backoff exponencial (tenacity) pra erros transitórios. As datas das janelas da Copa ficam em `vars` do dbt, então mudar uma janela pede só um `dbt build` novo, sem recoletar nada. Os detalhes de cada projeto dbt estão em [docs/dbt.md](docs/dbt.md) e os da análise de podcasts em [docs/podcasts.md](docs/podcasts.md).
+
+## Decisões e trade-offs
+
+- Cota da API. A ideia original era usar `search.list` com filtro de data, que custa 100 unidades por chamada (a cota diária padrão é 10.000). Troquei por `playlistItems.list` na playlist de uploads de cada canal, a 1 unidade por chamada, parando assim que aparece um vídeo mais antigo que o início da janela. As estatísticas vêm de `videos.list` em lotes de 50.
+- DuckDB pra Copa e Turso pros podcasts. Carga única e analítica de um lado, escritas pequenas e recorrentes num runner sem disco do outro. Está no [ADR 0001](docs/adr/0001-duckdb-vs-turso.md).
+- Dois projetos dbt em grupos uv em conflito. `dbt-sqlite` e `dbt-duckdb` pedem versões de `dbt-core` incompatíveis, então cada um tem seu grupo no `pyproject.toml`, declarados em `[tool.uv] conflicts`. No Docker cada serviço sincroniza o próprio grupo, e no Airflow cada projeto tem sua venv ([docs/dbt.md](docs/dbt.md)).
+- Cortei os podcasts de 19 pra 5 canais. Cada escrita no Turso é um round-trip de rede. Os 19 canais davam horas por execução, os 5 com mais inscritos cabem num cron diário.
+- Desliguei o cron em setembro de 2026. O `push_marts_to_turso.py` reescrevia o `video_growth` inteiro todo dia e estourou a cota de escrita do plano free do Turso. A coleta já tinha mostrado o SCD2 acumulando histórico, e não faz sentido pagar plano pra um projeto de portfólio. O dashboard segue no ar só com leitura do último snapshot.
+- Airflow só validado localmente. Reimplementei as duas orquestrações como DAGs do Apache Airflow com o Astro CLI e validei localmente de ponta a ponta. Em produção a coleta rodou no GitHub Actions. Fiz o Airflow pra aprender a ferramenta, e subir em produção exigiria pagar (o Astro Cloud não tem plano gratuito permanente). Detalhes em [docs/airflow.md](docs/airflow.md).
+
+## Bugs que valeram a pena
+
+### Teste de integridade reprovando dado certo
+
+A primeira execução do workflow de podcasts, disparada à mão em 03/09/2026, é a única falha da tabela acima. Os testes `relationships` dos fatos de métrica quebraram. Eles apontavam pros modelos de staging das dimensões, que filtram `is_current = 1`. Só que um fato antigo aponta legitimamente pra uma versão do canal ou do vídeo que deixou de ser vigente, e assim que um atributo mudou entre duas coletas o teste passou a reprovar dado válido. Troquei o alvo do teste pela dimensão raw, com todas as versões (commit `14c4e25`), e a execução seguinte passou. O teste só falhou quando o SCD2 começou a guardar histórico de verdade.
+
+### Dashboard publicado sem os marts
+
+A página de podcasts no Streamlit Cloud dava `ValueError`. O `dbt-sqlite` grava os marts no arquivo local, que morre junto com o runner do Actions, e o Turso só tinha as tabelas raw da ingestão. Criei o `dbt/push_marts_to_turso.py`, que copia os marts de volta pro Turso no fim do workflow (commit `63c8517`). Três semanas depois foi esse mesmo passo que estourou a cota de escrita.
+
+## Limitações
+
+- O 94,9% é share entre 4 canais de esporte no YouTube, não a fatia da CazéTV na audiência da Copa. A concorrência de verdade era a TV aberta, e a GE TV concentrou a audiência digital no Globoplay, fora desse recorte.
+- Medir o impacto fora do YouTube pediria dado fechado. Audiência de TV (Ibope, Kantar) não tem API e sai na imprensa numa unidade que não bate com views. Social listening (X, Instagram) depende de API paga. Por isso respondi só "quem venceu no YouTube", que os dados sustentam de ponta a ponta.
+- As métricas da Copa são as views acumuladas até a coleta, feita de uma vez em 03/09/2026, e não as views dentro de cada janela. Um vídeo do pré-Copa teve mais tempo pra acumular.
+- A página de podcasts depende do Turso free. Se o banco for pausado ou apagado, ela para de mostrar dados.
+- O Airflow nunca rodou em produção.
 
 ## Como rodar
 
-### Local (uv)
+### Caminho rápido (sem API key)
+
+Precisa do [uv](https://docs.astral.sh/uv/). O `data/copa2026.duckdb` já vem com os marts prontos.
 
 ```bash
-uv sync                              # Python 3.11+, cria .venv com runtime + dev
-cp .env.example .env                 # preencha YOUTUBE_API_KEY (Google Cloud Console)
-
-uv run python -m copa2026.ingest     # coleta os 4 canais nas 3 janelas -> data/copa2026.duckdb
-
-cd copa2026/dbt && uv run --group dbt-copa dbt run && uv run --group dbt-copa dbt test && cd ../..
-
-make test                            # pytest
-make lint                            # ruff check + ruff format --check
-make dashboard                       # dashboard abre na análise da Copa 2026
+git clone https://github.com/romualdobarbosa/youtube-audience-pipeline.git
+cd youtube-audience-pipeline
+uv sync --python 3.11
+make dashboard    # http://localhost:8501
 ```
 
-> Os dois dbt ficam em grupos separados no `pyproject.toml` (`dbt-copa` e
-> `dbt-podcasts`, declarados em conflito), de propósito. Ver a nota em [Sobre as versões do dbt](#sobre-as-versões-do-dbt-e-por-que-são-dois-projetos-separados).
+A página da Copa abre direto. A de podcasts mostra um aviso de "sem dados", porque depende do Turso ou de uma coleta local.
 
-### Docker / Docker Compose
+### Caminho completo
+
+Precisa de uma `YOUTUBE_API_KEY` (Google Cloud Console) no `.env`.
 
 ```bash
-cp .env.example .env
+cp .env.example .env                       # preencha YOUTUBE_API_KEY
+uv run python -m copa2026.ingest           # coleta os 4 canais nas 3 janelas
+cd copa2026/dbt && uv run --group dbt-copa dbt build --profiles-dir . && cd ../..
+make dashboard
+```
 
+A análise de podcasts (modo local ou Turso) está em [docs/podcasts.md](docs/podcasts.md), e o deploy no Streamlit Cloud em [docs/streamlit-cloud.md](docs/streamlit-cloud.md).
+
+Com Docker Compose (ou `podman-compose`, com os mesmos argumentos):
+
+```bash
 docker compose --profile copa-ingest run --rm copa-ingest   # coleta
-docker compose --profile copa-dbt run --rm copa-dbt         # staging + marts
+docker compose --profile copa-dbt run --rm copa-dbt         # dbt run + dbt test
 docker compose up -d dashboard                               # http://localhost:8501
 ```
 
-### Streamlit Community Cloud
-
-Dashboard publicado em share.streamlit.io a partir deste repo:
-**https://youtubeviewcounter.streamlit.app/**
-
-- **Main file path**: `src/dashboard.py`
-- **Python version** (Advanced settings): `3.11` — mesma versão do `Dockerfile`
-  e dos workflows do GitHub Actions.
-- **Dependências**: o Streamlit Cloud procura o arquivo de dependências
-  primeiro na pasta do main file e só depois na raiz. Por isso existe o
-  `src/requirements.txt`, gerado do `uv.lock` (só o runtime) pelo hook
-  `uv-export` do pre-commit.
-- **Secrets** (painel da app, não commitado): `DB_BACKEND = "turso"`,
-  `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — as mesmas credenciais usadas pelo
-  workflow de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página
-  **Podcasts BR** ler do mesmo banco que o Actions alimentava. A ingestão está
-  encerrada (ver [Status do projeto](#status-do-projeto)): a página mostra o
-  último snapshot, de 28/09/2026.
-- **Copa 2026**: não depende de secret nenhum — lê `data/copa2026.duckdb`, que é
-  commitado no repo (exceção deliberada ao `*.duckdb` do `.gitignore`, ver linha
-  correspondente). Dados históricos (janelas já no passado, coleta única — ver
-  [Por que dois stores](#por-que-dois-stores-duckdb-pra-copa-turso-pra-podcasts)),
-  então não há reingestão automática: pra atualizar, roda `copa2026/ingest.py` +
-  `dbt run` local e commita o `.duckdb` de novo.
-
-### Airflow (Astro CLI)
-
-`airflow/` isola um segundo projeto Astro/Airflow que reimplementa as duas
-ingestões como DAGs, validadas rodando de ponta a ponta via `astro dev start`:
-
-- **`podcasts_ingest_dbt`** — mesmos passos do `podcasts-ingest.yml`: ingestão →
-  Turso → `dbt run`/`dbt test`. Sem agendamento hoje (`schedule=None`); o cron
-  original era `0 6 * * *`.
-- **`copa2026_ingest_dbt`** — coleta única e retroativa, `schedule=None`,
-  disparo manual pela UI (equivalente aos profiles `copa-ingest`/`copa-dbt`
-  do `docker-compose.yml`).
-
-O mesmo conflito de versão do dbt (ver [Sobre as versões do
-dbt](#sobre-as-versões-do-dbt-e-por-que-são-dois-projetos-separados)) reaparece
-aqui e é resolvido com uma venv por projeto, construída em build-time no
-`airflow/Dockerfile` (`dbt_venvs/podcasts` e `dbt_venvs/copa2026`), isoladas
-entre si e do ambiente principal do Airflow.
-
-**Não foi o orquestrador em produção** — quem rodou a ingestão de verdade foi o
-GitHub Actions (`.github/workflows/podcasts-ingest.yml`, seção
-[Podcasts BR](#podcasts-br-segunda-análise-mesmo-pipeline) abaixo). Este projeto
-Astro fica rodando localmente (`cd airflow && astro dev start`) como uma segunda
-implementação da mesma orquestração — decisão de onde hospedar em produção
-ainda em aberto.
-
-## Status do projeto
-
-Projeto de portfólio, **finalizado**. A ingestão de podcasts ficou ativa de
-04/09 a 28/09/2026 (27 execuções, 26 com sucesso) e cumpriu o papel dela:
-provar que o pipeline funciona de ponta a ponta — YouTube API → SCD2 no Turso →
-dbt (run + testes da invariante SCD2) → marts → dashboard publicado — e que o
-SCD2 acumula histórico de verdade em coletas recorrentes.
-
-Depois disso o cron foi desativado de propósito: a cota de escrita do plano free
-do Turso estourou (o mart `video_growth` era reescrito inteiro todo dia, ~528 mil
-linhas na última execução) e não faz sentido pagar pra manter rodando um projeto
-de portfólio. O dashboard segue no ar, só de leitura, com o último snapshot
-(28/09/2026). Pra retomar: descomentar o `schedule` do workflow e rodar
-`gh workflow enable podcasts-ingest.yml`. `dbt/push_marts_to_turso.py` já foi
-ajustado pra empurrar só o top 1.000 do `video_growth`, o que reduz o volume
-diário de escrita pra ~60–80 mil linhas.
-
-## Modelo de dados
-
-```
-copa_videos (raw, flat — copa2026/ingest.py)
-        │
-        ▼ dbt staging
-stg_copa_videos (+ engagement_rate, + time_window via CASE WHEN)
-        │
-        ▼ dbt marts (materializados como tabela no DuckDB)
-channel_window_metrics       -- canal x janela x métricas (a entrega principal)
-channel_window_comparison    -- 1 linha por canal, janelas lado a lado + deltas
-```
-
-## Testes
+## Desenvolvimento
 
 ```bash
-pytest                        # ingestão (mockada) + upserts SCD2 (análise secundária)
-cd copa2026/dbt && dbt test  # schema tests + teste de grão único (channel_id, time_window)
-cd dbt && dbt test           # schema tests + invariante SCD2 (podcasts)
+make install    # uv sync + pre-commit install
+make lint       # ruff check + ruff format --check
+make test       # pytest (API mockada, SQLite temporário)
+make dbt-test   # dbt build da Copa numa cópia do .duckdb e dos podcasts numa fixture sintética
+make all        # lint + test + dbt-test
 ```
 
-Pra não depender dos bancos reais, eu uso o `make dbt-test`. Ele roda o `dbt build` da Copa numa cópia do `.duckdb` e o dos podcasts numa fixture SQLite sintética gerada por `tests/fixtures/make_podcasts_fixture.py`, sem precisar de segredo. O CI roda o mesmo a cada push.
+O `make dbt-test` também gera uma fixture quebrada, com duas versões vigentes pra mesma chave, e confere que os testes de invariante SCD2 reprovam essa fixture. O pre-commit roda o ruff e regenera `src/requirements.txt` a partir do `uv.lock`. O CI (`.github/workflows/tests.yml`) roda `make lint`, `make test`, `make dbt-copa` e `make dbt-podcasts` em Python 3.11 a cada push e pull request, sem segredo nenhum.
 
-## Estrutura
+## Stack
 
-```
-copa2026/
-├── config.py  # canais, janelas de data, caminho do DuckDB
-├── ingest.py  # orquestração da coleta (reaproveita src/api.py)
-└── dbt/       # staging + marts (dbt-duckdb)
+Python 3.11, YouTube Data API v3, dbt (dbt-duckdb e dbt-sqlite), DuckDB, SQLite, Turso/libSQL, SQLAlchemy, Streamlit, Plotly, Apache Airflow (Astro CLI), Docker e Docker Compose, GitHub Actions, uv, ruff, pre-commit e pytest.
 
-src/
-├── api.py                   # cliente YouTube Data API v3 (compartilhado pelas 2 análises)
-├── config.py                # credenciais, canais de podcast, logging
-├── database.py              # modelos ORM + upserts SCD2 (análise secundária)
-├── main.py                  # orquestração da ingestão de podcasts
-├── ranking.py               # CLI de ranking de podcasts
-├── dashboard.py             # dashboard Streamlit — página padrão: Copa 2026
-└── pages/
-    └── 1_🎙️_Podcasts_BR.py  # página secundária: ranking de podcasts
+## Licença
 
-dbt/                        # staging + marts da análise secundária (dbt-sqlite)
-├── sync_replica.py         # Turso -> data/youtube.db local (dbt-sqlite só lê arquivo local)
-├── push_marts_to_turso.py  # materializa os marts como tabelas no Turso (dashboard remoto lê daqui)
-└── ...
-
-airflow/                        # projeto Astro/Airflow — orquestração alternativa (ver seção acima)
-└── dags/
-    ├── podcasts_ingest_dbt.py  # mesmos passos do workflow abaixo (sem agendamento)
-    └── copa2026_ingest_dbt.py  # disparo manual, mesma ingestão única
-
-.github/workflows/
-├── podcasts-ingest.yml  # ingestão -> Turso -> dbt run/test -> push dos marts (cron desativado, só manual)
-└── tests.yml            # pytest em todo push/PR
-```
-
----
-
-## Podcasts BR (segunda análise, mesmo pipeline)
-
-O mesmo padrão — ingestão pela YouTube Data API + transformação em dbt — também
-alimenta uma segunda análise, sem relação com a Copa: ranking de canais de podcast
-brasileiros, com dimensões **SCD2** (histórico de atributos que mudam devagar,
-como nome/handle de canal) e fatos de snapshot (métricas coletadas repetidamente ao
-longo do tempo — a diferença de desenho pro caso da Copa, que é uma coleta única).
-6 views analíticas (ranking, shorts vs. longos, cadência de upload, crescimento
-entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`). Modelo
-dimensional (2 dims SCD2 + 2 fatos de snapshot) documentado em `docs/esquema.sql`.
-
-**5 canais** (os mais relevantes por inscritos — Podpah, Flow Podcast,
-Inteligência Ltda, AchismosTV, TICARACATICAST), reduzido de uma lista original
-de 19. Motivo real, não estético: medi contra um Turso de verdade e cada escrita
-custa um round-trip de rede (~0,2s, mesmo em lote — `sqlalchemy-libsql` ainda não
-implementa o batching nativo do protocolo Hrana pra INSERT). Os 19 canais
-completos somam ~46 mil vídeos → **horas** por execução; os 5 mais relevantes
-somam ~19,5 mil → minutos a ~1h. `src/database.py::upsert_videos_scd2_batch`
-ainda assim faz 1 SELECT por canal em vez de 1 por vídeo (o ganho real que deu
-pra conseguir) — lista de canais e o porquê de cada um em `src/config.py`.
-
-Rodou automaticamente todo dia via **GitHub Actions**
-(`.github/workflows/podcasts-ingest.yml`, cron `0 6 * * *`, hoje desativado —
-ver [Status do projeto](#status-do-projeto)),
-escrevendo direto num banco **Turso** — o runner do Actions é efêmero, não tem
-onde persistir um arquivo local entre execuções, e é assim que o SCD2 finalmente
-acumula histórico de verdade em vez de depender de coletas manuais esporádicas.
-
-Acesse pela aba **Podcasts BR** do dashboard, ou rode localmente:
-
-```bash
-# Modo local (padrão) — grava em data/youtube.db, igual sempre foi:
-python -m src.main
-cd dbt && dbt run && dbt test
-
-# Modo Turso (mesmo store usado no Actions) — preencha DB_BACKEND=turso,
-# TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no .env (turso db create / turso db
-# tokens create), depois:
-python -m src.main                    # escreve direto no Turso
-pip install -r dbt/requirements.txt
-python dbt/sync_replica.py            # espelha o Turso pra data/youtube.db local
-cd dbt && dbt run && dbt test          # dbt-sqlite só lê arquivo local, nunca o Turso direto
-python dbt/push_marts_to_turso.py     # materializa os marts como tabelas no Turso
-                                       # (dbt-sqlite não escreve remoto — sem isso um
-                                       # consumidor que lê só o Turso, ex. Streamlit
-                                       # Cloud, não vê os marts, só as tabelas raw)
-
-python -m src.ranking --by views --shorts
-```
-
-Detalhes de ingestão (retry/backoff, tolerância a falha por canal), SCD2 e Docker
-desse fluxo estão comentados no código (`src/database.py`, `src/main.py`,
-`docker-compose.yml`, profiles `ingest`/`dbt`).
-
-## Por que dois stores (DuckDB pra Copa, Turso pra podcasts)
-
-Não é acaso — é o padrão de acesso de cada análise que decide:
-
-- **Copa 2026 → DuckDB**: coleta **única**, batch, analítica — carrega tudo,
-  faz joins/window functions pesados em memória, persiste o resultado uma vez.
-  Perfil clássico de OLAP local, DuckDB é feito pra isso.
-- **Podcasts → Turso (libSQL)**: coleta **recorrente** (diária, via cron), muitas
-  escritas pequenas ao longo do tempo (um upsert SCD2 por canal/vídeo a cada
-  run), rodando num runner efêmero que não tem disco persistente entre execuções.
-  Perfil transacional clássico de OLTP — precisa de um store gerenciado que
-  sobreviva entre execuções, não um arquivo local que o Actions apagaria a cada
-  vez.
-
-`dbt-sqlite` só fala SQLite local via `sqlite3` — não existe adapter dbt pra
-libSQL remoto. Por isso `dbt/sync_replica.py` espelha as tabelas do Turso pra um
-arquivo local (via SQLAlchemy Core, reaproveitando o schema de `Base.metadata`
-em `src/database.py`) antes de cada `dbt run` — a leitura do dbt nunca muda
-(`dbt/profiles.yml` aponta pro arquivo local sempre, venha ele de onde vier).
-
----
-
-## Sobre as versões do dbt (e por que são dois projetos separados)
-
-`dbt/` (podcasts, adapter `dbt-sqlite`) e `copa2026/dbt/` (Copa 2026, adapter
-`dbt-duckdb`) pinam versões de `dbt-core` **diferentes e incompatíveis entre si**:
-
-- `dbt-sqlite` não acompanha os releases recentes de `dbt-core`/`dbt-adapters` — a
-  combinação "tudo na última versão" quebra o import do adaptador. A combinação
-  testada e funcional (validada com `dbt run`/`dbt test` reais) está fixa em
-  `dbt/requirements.txt`: `dbt-core==1.11.14` + `dbt-adapters==1.16.7` +
-  `dbt-sqlite==1.10.0`. Precisa de **Python 3.11/3.12** — `dbt-common` (via
-  `mashumaro`) quebra em Python 3.14.
-- `dbt-duckdb` acompanha o `dbt-core` bem mais de perto — funcionou de primeira
-  inclusive em Python 3.14, sem downgrade nenhum (`copa2026/dbt/requirements.txt`).
-
-Por isso os dois `requirements.txt` de dbt ficam fora do `requirements-docker.txt`
-da imagem principal: cada serviço do `docker-compose.yml` (`dbt`/`copa-dbt`) instala
-as suas próprias dependências na hora de rodar, em vez de tudo pré-instalado num
-único ambiente onde elas colidiriam. O mesmo conflito de versão se repete no
-[Airflow](#airflow-astro-cli) e é resolvido do mesmo jeito: uma venv por
-projeto dbt.
+[MIT](LICENSE)

@@ -2,6 +2,8 @@
 
 Segunda análise do repo, com o mesmo cliente da YouTube Data API v3. É um ranking de canais de podcast brasileiros com coleta recorrente. As dimensões de canal e vídeo são SCD2 (guardam o histórico de atributos que mudam devagar, como nome e handle), e as métricas entram como fatos de snapshot a cada coleta. O DDL de referência está em [esquema.sql](esquema.sql).
 
+![Página Podcasts BR no dashboard](img/dashboard-podcasts.png)
+
 ## Por que 5 canais
 
 São Podpah, Flow Podcast, Inteligência Ltda, AchismosTV e TICARACATICAST, os cinco com mais inscritos de uma lista original de 19 (o porquê de cada um está em `src/config.py`). O corte veio da medição contra o Turso. Cada escrita custa um round-trip de rede (uns 0,2 s por vídeo, mesmo em lote, porque o `sqlalchemy-libsql` não implementa o batching do protocolo Hrana pra INSERT). Os 19 canais somavam uns 46 mil vídeos, o que dava horas por execução, e os 5 somam uns 19,5 mil. O `upsert_videos_scd2_batch` em `src/database.py` faz um SELECT por canal em vez de um por vídeo, que foi o ganho que deu pra conseguir.
