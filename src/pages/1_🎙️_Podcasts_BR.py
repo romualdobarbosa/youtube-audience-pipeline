@@ -81,16 +81,25 @@ st.caption(
     "um segundo problema: ranking de canais de podcast."
 )
 
-ranking = load("SELECT * FROM channel_ranking")
+# Num clone sem data/youtube.db (e sem DB_BACKEND=turso) os marts não existem:
+# mostra o aviso em vez de estourar o traceback.
+try:
+    ranking = load("SELECT * FROM channel_ranking")
+except pd.errors.DatabaseError:
+    ranking = pd.DataFrame()
+
+if ranking.empty:
+    st.warning(
+        "Sem dados de podcasts neste ambiente. Pra coletar, siga o docs/podcasts.md "
+        "(ingestão com `uv run python -m src.main` e depois o dbt)."
+    )
+    st.stop()
+
 svl = load("SELECT * FROM short_vs_long")
 latest = load("SELECT * FROM latest_video_metrics")
 growth = load("SELECT * FROM channel_growth")
 vgrowth = load("SELECT * FROM video_growth")
 cadence = load("SELECT * FROM upload_cadence")
-
-if ranking.empty:
-    st.warning("Sem dados ainda. Rode `python -m src.main` para coletar.")
-    st.stop()
 
 # --- Ranking de canais --------------------------------------------------------
 st.header("Ranking de canais")
