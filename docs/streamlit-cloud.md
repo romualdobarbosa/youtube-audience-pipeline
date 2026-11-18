@@ -6,7 +6,7 @@ O app publicado fica em https://youtubeviewcounter.streamlit.app/ e é deployado
 
 - Main file path: `src/dashboard.py`
 - Python version (Advanced settings): `3.11`, a mesma do `Dockerfile` e dos workflows do GitHub Actions.
-- Dependências: o Streamlit Cloud procura o arquivo de dependências primeiro na pasta do main file e só depois na raiz. Por isso existe `src/requirements.txt`, gerado do `uv.lock` (só o runtime) pelo hook `uv-export` do pre-commit. Não edite à mão.
+- Dependências. O Streamlit Cloud procura o arquivo de dependências primeiro na pasta do main file e só depois na raiz. Por isso existe `src/requirements.txt`, gerado do `uv.lock` (só o runtime) pelo hook `uv-export` do pre-commit. Não edite à mão.
 
 ## Secrets
 

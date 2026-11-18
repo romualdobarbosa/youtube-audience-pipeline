@@ -37,6 +37,6 @@ Cada fixture fica numa pasta própria porque o `dbt-sqlite` anexa todo `.db` que
 
 ## Modelos
 
-Copa 2026: `stg_copa_videos` classifica cada vídeo numa janela (as datas ficam em `vars` no `copa2026/dbt/dbt_project.yml`), e os marts `channel_window_metrics` e `channel_window_comparison` agregam por canal e janela.
+Na Copa 2026, `stg_copa_videos` classifica cada vídeo numa janela (as datas ficam em `vars` no `copa2026/dbt/dbt_project.yml`), e os marts `channel_window_metrics` e `channel_window_comparison` agregam por canal e janela.
 
-Podcasts: quatro modelos de staging em cima das dimensões SCD2 e dos fatos de snapshot, e seis marts (`channel_ranking`, `short_vs_long`, `upload_cadence`, `channel_growth`, `video_growth`, `latest_video_metrics`). O DDL de referência do modelo dimensional está em [esquema.sql](esquema.sql).
+Nos podcasts são quatro modelos de staging em cima das dimensões SCD2 e dos fatos de snapshot, e seis marts (`channel_ranking`, `short_vs_long`, `upload_cadence`, `channel_growth`, `video_growth`, `latest_video_metrics`). O DDL de referência do modelo dimensional está em [esquema.sql](esquema.sql).
