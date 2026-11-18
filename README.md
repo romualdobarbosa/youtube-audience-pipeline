@@ -122,22 +122,23 @@ cada janela (as datas) é regra de negócio e fica no dbt (`vars` em
 
 ## Como rodar
 
-### Local (pip)
+### Local (uv)
 
 ```bash
-pip install -r requirements.txt
+uv sync                              # Python 3.11+, cria .venv com runtime + dev
 cp .env.example .env                 # preencha YOUTUBE_API_KEY (Google Cloud Console)
 
-python -m copa2026.ingest             # coleta os 4 canais nas 3 janelas -> data/copa2026.duckdb
+uv run python -m copa2026.ingest     # coleta os 4 canais nas 3 janelas -> data/copa2026.duckdb
 
-pip install -r copa2026/dbt/requirements.txt
-cd copa2026/dbt && dbt run && dbt test && cd ../..
+cd copa2026/dbt && uv run --group dbt-copa dbt run && uv run --group dbt-copa dbt test && cd ../..
 
-streamlit run src/dashboard.py        # dashboard abre na análise da Copa 2026
+make test                            # pytest
+make lint                            # ruff check + ruff format --check
+make dashboard                       # dashboard abre na análise da Copa 2026
 ```
 
-> `copa2026/dbt/requirements.txt` fica separado do `requirements.txt` de propósito
-> — ver nota em [Sobre as versões do dbt](#sobre-as-versões-do-dbt-e-por-que-são-dois-projetos-separados).
+> Os dois dbt ficam em grupos separados no `pyproject.toml` (`dbt-copa` e
+> `dbt-podcasts`, declarados em conflito), de propósito. Ver a nota em [Sobre as versões do dbt](#sobre-as-versões-do-dbt-e-por-que-são-dois-projetos-separados).
 
 ### Docker / Docker Compose
 
@@ -157,12 +158,10 @@ Dashboard publicado em share.streamlit.io a partir deste repo:
 - **Main file path**: `src/dashboard.py`
 - **Python version** (Advanced settings): `3.11` — mesma versão do `Dockerfile`
   e dos workflows do GitHub Actions.
-- **Dependências**: o Streamlit Cloud instala o `requirements.txt` da mesma
-  pasta do main file antes de cair pro da raiz — por isso existe
-  `src/requirements.txt`, que só aponta (`-r ../requirements-docker.txt`) pro
-  enxuto já validado na imagem Docker. O `requirements.txt` da raiz é o pip
-  freeze completo do ambiente de dev (Jupyter etc.) e não instala no Cloud —
-  tem pacote (`ipython==9.11.0`) que exige Python≥3.12.
+- **Dependências**: o Streamlit Cloud procura o arquivo de dependências
+  primeiro na pasta do main file e só depois na raiz. Por isso existe o
+  `src/requirements.txt`, gerado do `uv.lock` (só o runtime) pelo hook
+  `uv-export` do pre-commit.
 - **Secrets** (painel da app, não commitado): `DB_BACKEND = "turso"`,
   `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — as mesmas credenciais usadas pelo
   workflow de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página
