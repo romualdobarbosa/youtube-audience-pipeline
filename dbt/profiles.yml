@@ -1,7 +1,9 @@
 # Sem segredos aqui (só caminho de arquivo SQLite) — por isso commitado junto com o
 # projeto, ao contrário do profiles.yml "normal" do dbt (que costuma guardar
 # credenciais e ficar fora do repo). Rodar sempre com --profiles-dir . (ou
-# DBT_PROFILES_DIR=dbt), a partir desta pasta.
+# DBT_PROFILES_DIR=dbt), a partir desta pasta. PODCASTS_SQLITE_PATH troca o
+# arquivo e PODCASTS_SCHEMA_DIR a pasta de schemas extras (o `make dbt-podcasts`
+# aponta os dois pra target/ci, longe de data/).
 podcasts_br:
   target: dev
   outputs:
@@ -11,5 +13,5 @@ podcasts_br:
       database: 'database'
       schema: 'main'
       schemas_and_paths:
-        main: '../data/youtube.db'
-      schema_directory: '../data'
+        main: "{{ env_var('PODCASTS_SQLITE_PATH', '../data/youtube.db') }}"
+      schema_directory: "{{ env_var('PODCASTS_SCHEMA_DIR', '../data') }}"
