@@ -1,4 +1,4 @@
-.PHONY: all install lint test dashboard
+.PHONY: all install lint test dashboard dbt-copa
 
 all: lint test
 
@@ -15,3 +15,11 @@ test:
 
 dashboard:
 	uv run streamlit run src/dashboard.py
+
+# dbt build da Copa numa cópia do .duckdb em target/ (gitignored): o build regrava
+# os marts, e o arquivo versionado em data/ tem que ficar intacto.
+dbt-copa:
+	mkdir -p copa2026/dbt/target/ci
+	cp data/copa2026.duckdb copa2026/dbt/target/ci/copa2026.duckdb
+	cd copa2026/dbt && COPA_DUCKDB_PATH=target/ci/copa2026.duckdb \
+		uv run --group dbt-copa dbt build --profiles-dir .
