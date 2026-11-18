@@ -2,7 +2,7 @@ services:
   # Dashboard Streamlit — serviço de longa duração, é o que sobe por padrão.
   dashboard:
     build: .
-    image: youtube-view-counter:latest
+    image: youtube-audience-pipeline:latest
     command:
       ["streamlit", "run", "src/dashboard.py", "--server.address=0.0.0.0"]
     ports:
@@ -17,7 +17,7 @@ services:
   #   docker compose --profile ingest run --rm ingest
   ingest:
     build: .
-    image: youtube-view-counter:latest
+    image: youtube-audience-pipeline:latest
     command: ["python", "-m", "src.main"]
     env_file:
       - .env
@@ -35,7 +35,7 @@ services:
   #   docker compose --profile dbt run --rm dbt
   dbt:
     build: .
-    image: youtube-view-counter:latest
+    image: youtube-audience-pipeline:latest
     command: >
       sh -c "uv sync -q --frozen --no-dev --no-cache --group dbt-podcasts &&
               python dbt/sync_replica.py &&
@@ -51,7 +51,7 @@ services:
   #   docker compose --profile copa-ingest run --rm copa-ingest
   copa-ingest:
     build: .
-    image: youtube-view-counter:latest
+    image: youtube-audience-pipeline:latest
     command: ["python", "-m", "copa2026.ingest"]
     env_file:
       - .env
@@ -65,7 +65,7 @@ services:
   #   docker compose --profile copa-dbt run --rm copa-dbt
   copa-dbt:
     build: .
-    image: youtube-view-counter:latest
+    image: youtube-audience-pipeline:latest
     command: >
       sh -c "uv sync -q --frozen --no-dev --no-cache --group dbt-copa &&
               cd copa2026/dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
