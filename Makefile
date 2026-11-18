@@ -1,6 +1,6 @@
-.PHONY: all install lint test dashboard dbt-copa dbt-podcasts
+.PHONY: all install lint test dashboard dbt-test dbt-copa dbt-podcasts
 
-all: lint test
+all: lint test dbt-test
 
 install:
 	uv sync
@@ -15,6 +15,8 @@ test:
 
 dashboard:
 	uv run streamlit run src/dashboard.py
+
+dbt-test: dbt-copa dbt-podcasts
 
 # dbt build da Copa numa cópia do .duckdb em target/ (gitignored): o build regrava
 # os marts, e o arquivo versionado em data/ tem que ficar intacto.
