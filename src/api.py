@@ -31,12 +31,7 @@ def parse_duration(iso8601: str | None) -> int:
     if not match:
         return 0
     parts = {k: int(v) for k, v in match.groupdict(default="0").items()}
-    return (
-        parts["days"] * 86400
-        + parts["hours"] * 3600
-        + parts["minutes"] * 60
-        + parts["seconds"]
-    )
+    return parts["days"] * 86400 + parts["hours"] * 3600 + parts["minutes"] * 60 + parts["seconds"]
 
 
 def build_client():
@@ -141,9 +136,7 @@ def get_playlist_video_ids(youtube, playlist_id: str) -> list[str]:
     return video_ids
 
 
-def get_playlist_video_ids_since(
-    youtube, playlist_id: str, since: date
-) -> list[str]:
+def get_playlist_video_ids_since(youtube, playlist_id: str, since: date) -> list[str]:
     """Pagina a playlist de uploads e para assim que encontrar um vídeo publicado
     antes de `since` — evita paginar o catálogo inteiro em canais com anos de
     conteúdo quando só interessa uma janela recente. Assume a ordem padrão da API

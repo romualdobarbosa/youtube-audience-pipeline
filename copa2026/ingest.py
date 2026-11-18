@@ -8,7 +8,7 @@ no passado, não um histórico de coletas repetidas — uma tabela flat é o mod
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import duckdb
 import pandas as pd
@@ -45,7 +45,7 @@ def run(channels: list[str] | None = None) -> None:
     channels = channels or config.CHANNELS
 
     youtube = api.build_client()
-    collected_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    collected_at = datetime.now(UTC).replace(tzinfo=None)
     logger.info(
         "Coletando %d canais para a janela %s a %s",
         len(channels),
@@ -107,7 +107,7 @@ def run(channels: list[str] | None = None) -> None:
     )
 
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df = pd.DataFrame(rows, columns=COLUMNS)
+    df = pd.DataFrame(rows, columns=COLUMNS)  # noqa: F841 (lido pelo DuckDB no SELECT abaixo)
     con = duckdb.connect(str(config.DB_PATH))
     try:
         # Coleta única: cada run substitui o dataset inteiro (não é incremental).

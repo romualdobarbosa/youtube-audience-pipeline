@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from . import api
 from .config import CHANNELS, setup_logging
@@ -24,7 +24,7 @@ def run(channels: list[str] | None = None) -> None:
     youtube = api.build_client()
 
     # Mesmo timestamp para todos os fatos do run -> idempotência/consistência da coleta.
-    collected_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    collected_at = datetime.now(UTC).replace(tzinfo=None)
     logger.info("Iniciando coleta em %s para %d canais", collected_at, len(channels))
 
     total_videos = 0

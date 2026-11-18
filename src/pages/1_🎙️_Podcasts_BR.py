@@ -148,7 +148,14 @@ tab_top, tab_spikes = st.tabs(["Top por views", "Picos (velocity)"])
 with tab_top:
     top = latest.sort_values("views", ascending=False).head(20)
     st.plotly_chart(
-        px.bar(top, x="title", y="views", color="video_type", title="Top 20 vídeos", labels=COLUMN_LABELS),
+        px.bar(
+            top,
+            x="title",
+            y="views",
+            color="video_type",
+            title="Top 20 vídeos",
+            labels=COLUMN_LABELS,
+        ),
         use_container_width=True,
     )
     table(top[["title", "video_type", "views", "engagement_rate", "views_per_day"]])
@@ -158,7 +165,13 @@ with tab_spikes:
     else:
         spikes = vgrowth.sort_values("views_delta", ascending=False).head(20)
         st.plotly_chart(
-            px.bar(spikes, x="title", y="views_delta", title="Maiores saltos de views entre coletas", labels=COLUMN_LABELS),
+            px.bar(
+                spikes,
+                x="title",
+                y="views_delta",
+                title="Maiores saltos de views entre coletas",
+                labels=COLUMN_LABELS,
+            ),
             use_container_width=True,
         )
         table(spikes)

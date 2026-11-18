@@ -98,14 +98,15 @@ metrics = load("SELECT * FROM channel_window_metrics")
 
 if comparison.empty:
     st.warning(
-        "Tabelas vazias. Rode `python -m copa2026.ingest` e depois `dbt run` em "
-        "`copa2026/dbt/`."
+        "Tabelas vazias. Rode `python -m copa2026.ingest` e depois `dbt run` em `copa2026/dbt/`."
     )
     st.stop()
 
 # --- Share of voice por janela --------------------------------------------------
 st.header("Share of voice: quem dominou cada janela")
-metrics["time_window"] = pd.Categorical(metrics["time_window"], categories=WINDOW_ORDER, ordered=True)
+metrics["time_window"] = pd.Categorical(
+    metrics["time_window"], categories=WINDOW_ORDER, ordered=True
+)
 st.plotly_chart(
     px.bar(
         metrics.sort_values("time_window"),

@@ -147,6 +147,7 @@ def init_db() -> None:
 
 # --- helpers SCD2 -------------------------------------------------------------
 
+
 def _video_type(duration_seconds: int | None) -> str:
     if duration_seconds is not None and duration_seconds <= SHORT_MAX_SECONDS:
         return "short"

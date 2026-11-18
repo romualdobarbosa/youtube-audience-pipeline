@@ -54,7 +54,9 @@ QUERIES = {
 
 def main() -> None:
     if DB_BACKEND != "turso":
-        print("DB_BACKEND != turso — nada a empurrar, dashboard local já lê data/youtube.db direto.")
+        print(
+            "DB_BACKEND != turso — nada a empurrar, dashboard local já lê data/youtube.db direto."
+        )
         return
 
     local = create_engine(f"sqlite:///{DB_PATH}", future=True)

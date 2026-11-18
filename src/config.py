@@ -59,11 +59,11 @@ def get_turso_credentials() -> tuple[str, str]:
 # reduziu a lista. 19 canais = ~46 mil vídeos = horas por execução; os 5 abaixo =
 # ~19.500 vídeos = minutos. Os mais relevantes (mais inscritos) ficaram.
 CHANNELS: list[str] = [
-    "@podpah",           # Podpah TV — 10,2M inscritos
-    "@flowpodcast",      # Flow Podcast — 6,19M
-    "@inteligencialtda", # Inteligência Ltda — 5,77M
-    "@AchismosTV",       # AchismosTV — 5,44M (corrigido: @Achismos dava 404)
-    "@Ticaracaticast",   # TICARACATICAST — 3,01M
+    "@podpah",  # Podpah TV — 10,2M inscritos
+    "@flowpodcast",  # Flow Podcast — 6,19M
+    "@inteligencialtda",  # Inteligência Ltda — 5,77M
+    "@AchismosTV",  # AchismosTV — 5,44M (corrigido: @Achismos dava 404)
+    "@Ticaracaticast",  # TICARACATICAST — 3,01M
 ]
 
 # Vídeos com duração <= este limiar (segundos) são classificados como "short".
