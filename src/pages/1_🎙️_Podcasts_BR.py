@@ -39,7 +39,7 @@ COLUMN_LABELS = {
     "avg_views": "Média de views",
     "avg_engagement_rate": "Engajamento médio",
     "short_count": "Shorts",
-    "long_count": "Longos",
+    "long_count": "Vídeos longos",
     "video_type": "Tipo",
     "catalog_share": "% do catálogo",
     "views_share": "% das views",
@@ -58,10 +58,10 @@ COLUMN_LABELS = {
     "collected_at": "Coleta",
     "prev_collected_at": "Coleta anterior",
     "subscriber_count": "Inscritos",
-    "subscriber_delta": "Δ inscritos",
-    "total_views_delta": "Δ views totais",
-    "views_delta": "Δ views",
-    "views_per_day_delta": "Δ views/dia",
+    "subscriber_delta": "Variação de inscritos",
+    "total_views_delta": "Variação de views totais",
+    "views_delta": "Variação de views",
+    "views_per_day_delta": "Variação de views/dia",
     "uploads": "Uploads",
     "weekday": "Dia (nº)",
     "dia": "Dia",
@@ -77,8 +77,8 @@ def table(df: pd.DataFrame) -> None:
 st.set_page_config(page_title="Podcasts BR no YouTube", layout="wide")
 st.title("Podcasts brasileiros no YouTube")
 st.caption(
-    "Mesmo pipeline de ingestão + dbt da análise principal (Copa 2026), aplicado a "
-    "um segundo problema: ranking de canais de podcast."
+    "A mesma ingestão e o mesmo dbt da análise da Copa 2026, aqui usados pra "
+    "comparar cinco canais de podcast."
 )
 
 # Num clone sem data/youtube.db (e sem DB_BACKEND=turso) os marts não existem:
@@ -122,7 +122,7 @@ st.plotly_chart(
 table(ranked)
 
 # --- Shorts vs vídeos longos: catálogo x views ----------------------------------
-st.header("Curtos (verticais) vs Longos (horizontais)")
+st.header("Shorts e vídeos longos")
 if not svl.empty:
     agg = svl.groupby("video_type")[["videos", "total_views"]].sum().reset_index()
     agg["catalog_share"] = agg["videos"] / agg["videos"].sum()
@@ -131,8 +131,8 @@ if not svl.empty:
     nomes = {"short": "Shorts", "long": "Vídeos longos"}
     for row in agg.itertuples():
         st.caption(
-            f"{nomes.get(row.video_type, row.video_type)}: {row.catalog_share:.0%} do catálogo e "
-            f"{row.views_share:.0%} das views."
+            f"{nomes.get(row.video_type, row.video_type)} são {row.catalog_share:.0%} do "
+            f"catálogo e levam {row.views_share:.0%} das views."
         )
     comp = agg.melt(
         id_vars="video_type",
@@ -147,7 +147,7 @@ if not svl.empty:
             y="proporção",
             color="video_type",
             barmode="group",
-            title="Participação no catálogo vs participação nas views",
+            title="Fatia no catálogo e fatia nas views",
             labels=COLUMN_LABELS,
         ),
         use_container_width=True,
@@ -156,7 +156,7 @@ if not svl.empty:
 
 # --- Picos de interesse em episódios ------------------------------------------
 st.header("Episódios em destaque")
-tab_top, tab_spikes = st.tabs(["Top por views", "Picos (velocity)"])
+tab_top, tab_spikes = st.tabs(["Mais vistos", "Maiores saltos"])
 with tab_top:
     top = latest.sort_values("views", ascending=False).head(20)
     st.plotly_chart(
@@ -165,7 +165,7 @@ with tab_top:
             x="title",
             y="views",
             color="video_type",
-            title="Top 20 vídeos",
+            title="Os 20 vídeos mais vistos",
             labels=COLUMN_LABELS,
         ),
         use_container_width=True,
@@ -173,7 +173,7 @@ with tab_top:
     table(top[["title", "video_type", "views", "engagement_rate", "views_per_day"]])
 with tab_spikes:
     if vgrowth.empty:
-        st.info("Picos exigem ao menos 2 coletas. Rode `python -m src.main` novamente mais tarde.")
+        st.info("Os saltos só aparecem depois de pelo menos 2 coletas.")
     else:
         spikes = vgrowth.sort_values("views_delta", ascending=False).head(20)
         st.plotly_chart(
@@ -191,14 +191,14 @@ with tab_spikes:
 # --- Crescimento de inscritos -------------------------------------------------
 st.header("Crescimento de inscritos")
 if growth.empty:
-    st.info("Crescimento exige ao menos 2 coletas.")
+    st.info("O crescimento só aparece depois de pelo menos 2 coletas.")
 else:
     st.plotly_chart(
         px.bar(
             growth.sort_values("subscriber_delta", ascending=False),
             x="name",
             y="subscriber_delta",
-            title="Δ inscritos entre coletas",
+            title="Inscritos ganhos entre coletas",
             labels=COLUMN_LABELS,
         ),
         use_container_width=True,

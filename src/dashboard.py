@@ -42,11 +42,11 @@ COLUMN_LABELS = {
     "pos_copa_videos": "Vídeos (Pós-Copa)",
     "pos_copa_views": "Views (Pós-Copa)",
     "pos_copa_engagement_rate": "Engajamento (Pós-Copa)",
-    "views_growth_copa_vs_pre": "Δ views (Copa vs Pré)",
+    "views_growth_copa_vs_pre": "Variação de views (Copa vs Pré)",
     "views_growth_pct_copa_vs_pre": "% crescimento (Copa vs Pré)",
-    "engagement_delta_copa_vs_pre": "Δ engajamento (Copa vs Pré)",
-    "views_delta_pos_vs_copa": "Δ views (Pós vs Copa)",
-    "engagement_delta_pos_vs_copa": "Δ engajamento (Pós vs Copa)",
+    "engagement_delta_copa_vs_pre": "Variação de engajamento (Copa vs Pré)",
+    "views_delta_pos_vs_copa": "Variação de views (Pós vs Copa)",
+    "engagement_delta_pos_vs_copa": "Variação de engajamento (Pós vs Copa)",
 }
 
 WINDOW_ORDER = ["Pré-Copa", "Copa", "Pós-Copa"]
@@ -69,7 +69,7 @@ def table(df: pd.DataFrame) -> None:
     )
 
 
-st.set_page_config(page_title="Copa 2026: guerra de relevância no YouTube", layout="wide")
+st.set_page_config(page_title="Copa 2026 no YouTube", layout="wide")
 st.title("Quem ganhou a guerra de relevância no YouTube brasileiro durante a Copa do Mundo 2026?")
 st.caption(
     "Performance por vídeo da CazéTV, GE TV, N Sports e TNT Sports Brasil em 3 janelas. "
@@ -78,19 +78,21 @@ st.caption(
 
 if not DB_PATH.exists():
     st.warning(
-        "Sem dados ainda. Rode a coleta e a transformação:\n\n"
-        "```\npython -m copa2026.ingest\ncd copa2026/dbt && dbt run && dbt test\n```"
+        "Ainda não tem dados aqui. Rode a coleta e depois o dbt:\n\n"
+        "```\nuv run python -m copa2026.ingest\n"
+        "cd copa2026/dbt && uv run --group dbt-copa dbt build --profiles-dir .\n```"
     )
     st.stop()
 
 with st.expander("Por que 3 janelas de publicação, e não uma curva de inscritos?"):
     st.markdown(
-        "A YouTube Data API v3 (`channels.list`) só devolve totais **acumulados atuais** "
-        "de inscritos e views, e não existe endpoint público com série histórica. Por isso "
-        "a métrica usada é **performance por vídeo publicado em cada janela** (cadência, "
-        "views, engajamento, share of voice), coletada via `playlistItems.list` + "
-        "`videos.list`, e não via `search.list`, que custaria ~100x mais cota de API pra "
-        "fazer a mesma coisa."
+        "A YouTube Data API só informa quantos inscritos e views cada canal tem hoje. "
+        "Não existe um jeito público de saber quanto eles tinham em junho, então não dá "
+        "pra desenhar uma curva de inscritos.\n\n"
+        "Por isso eu comparo os vídeos publicados em cada janela, olhando quantos saíram, "
+        "quantas views tiveram, o engajamento e a fatia de views de cada canal. A coleta "
+        "usa `playlistItems.list` e `videos.list`, que gastam cerca de 100 vezes menos "
+        "cota de API que o `search.list`."
     )
 
 comparison = load("SELECT * FROM channel_window_comparison")
@@ -98,12 +100,13 @@ metrics = load("SELECT * FROM channel_window_metrics")
 
 if comparison.empty:
     st.warning(
-        "Tabelas vazias. Rode `python -m copa2026.ingest` e depois `dbt run` em `copa2026/dbt/`."
+        "As tabelas estão vazias. Rode `uv run python -m copa2026.ingest` e depois o "
+        "`dbt build` em `copa2026/dbt/`."
     )
     st.stop()
 
 # --- Share of voice por janela --------------------------------------------------
-st.header("Share of voice: quem dominou cada janela")
+st.header("Quem dominou cada janela (share of voice)")
 metrics["time_window"] = pd.Categorical(
     metrics["time_window"], categories=WINDOW_ORDER, ordered=True
 )
@@ -114,7 +117,7 @@ st.plotly_chart(
         y="share_of_voice",
         color="time_window",
         barmode="group",
-        title="% das views totais do grupo, por canal e por janela",
+        title="Fatia de cada canal nas views do grupo, por janela",
         labels=COLUMN_LABELS,
     ),
     use_container_width=True,
@@ -122,28 +125,28 @@ st.plotly_chart(
 table(metrics.sort_values(["time_window", "total_views"], ascending=[True, False]))
 
 # --- Quem cresceu com a Copa -----------------------------------------------------
-st.header("Quem cresceu: Copa vs Pré-Copa")
+st.header("Quem cresceu na Copa")
 growth = comparison.sort_values("views_growth_copa_vs_pre", ascending=False)
 st.plotly_chart(
     px.bar(
         growth,
         x="channel_name",
         y="views_growth_copa_vs_pre",
-        title="Δ views totais (Copa − Pré-Copa)",
+        title="Views a mais na Copa em relação à Pré-Copa",
         labels=COLUMN_LABELS,
     ),
     use_container_width=True,
 )
 
 # --- Quem reteve engajamento depois -----------------------------------------------
-st.header("Quem reteve: Pós-Copa vs Copa")
+st.header("Quem segurou o engajamento depois da Copa")
 retention = comparison.sort_values("engagement_delta_pos_vs_copa", ascending=False)
 st.plotly_chart(
     px.bar(
         retention,
         x="channel_name",
         y="engagement_delta_pos_vs_copa",
-        title="Δ engajamento médio (Pós-Copa − Copa)",
+        title="Variação do engajamento médio da Copa pro Pós-Copa",
         labels=COLUMN_LABELS,
     ),
     use_container_width=True,
