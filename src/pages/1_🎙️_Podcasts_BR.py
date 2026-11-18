@@ -101,6 +101,11 @@ growth = load("SELECT * FROM channel_growth")
 vgrowth = load("SELECT * FROM video_growth")
 cadence = load("SELECT * FROM upload_cadence")
 
+TIPOS = {"short": "Shorts", "long": "Vídeos longos"}
+for df in (svl, latest, vgrowth):
+    if "video_type" in df.columns:
+        df["video_type"] = df["video_type"].map(TIPOS).fillna(df["video_type"])
+
 # --- Ranking de canais --------------------------------------------------------
 st.header("Ranking de canais")
 metric = st.selectbox(
@@ -128,17 +133,19 @@ if not svl.empty:
     agg["catalog_share"] = agg["videos"] / agg["videos"].sum()
     agg["views_share"] = agg["total_views"] / agg["total_views"].sum()
     # Texto calculado dos próprios dados, pra nunca contradizer o gráfico.
-    nomes = {"short": "Shorts", "long": "Vídeos longos"}
-    for row in agg.itertuples():
+    for row in agg.sort_values("video_type", ascending=False).itertuples():
         st.caption(
-            f"{nomes.get(row.video_type, row.video_type)} são {row.catalog_share:.0%} do "
-            f"catálogo e levam {row.views_share:.0%} das views."
+            f"{row.video_type} são {row.catalog_share:.0%} do catálogo e levam "
+            f"{row.views_share:.0%} das views."
         )
     comp = agg.melt(
         id_vars="video_type",
         value_vars=["catalog_share", "views_share"],
         var_name="métrica",
         value_name="proporção",
+    )
+    comp["métrica"] = comp["métrica"].map(
+        {"catalog_share": "Fatia no catálogo", "views_share": "Fatia nas views"}
     )
     st.plotly_chart(
         px.bar(
@@ -148,7 +155,7 @@ if not svl.empty:
             color="video_type",
             barmode="group",
             title="Fatia no catálogo e fatia nas views",
-            labels=COLUMN_LABELS,
+            labels={**COLUMN_LABELS, "métrica": "", "proporção": "Proporção"},
         ),
         use_container_width=True,
     )
