@@ -238,6 +238,8 @@ cd copa2026/dbt && dbt test  # schema tests + teste de grão único (channel_id,
 cd dbt && dbt test           # schema tests + invariante SCD2 (podcasts)
 ```
 
+Pra não depender dos bancos reais, eu uso o `make dbt-test`. Ele roda o `dbt build` da Copa numa cópia do `.duckdb` e o dos podcasts numa fixture SQLite sintética gerada por `tests/fixtures/make_podcasts_fixture.py`, sem precisar de segredo. O CI roda o mesmo a cada push.
+
 ## Estrutura
 
 ```
