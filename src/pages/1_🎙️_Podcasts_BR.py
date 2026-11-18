@@ -1,7 +1,7 @@
 """Dashboard Streamlit: insights sobre canais de podcast brasileiros no YouTube.
 
 Página secundária — a página padrão do app é a análise da Copa do Mundo 2026
-(src/dashboard.py). Esta aqui mostra o mesmo pipeline (ingestão YouTube API → dbt)
+(src/copa.py). Esta aqui mostra o mesmo pipeline (ingestão YouTube API → dbt)
 aplicado a um segundo problema: ranking de canais de podcast.
 """
 
@@ -16,7 +16,7 @@ try:
     from ..database import get_engine
 except ImportError:
     # quando executado direto: `streamlit run src/dashboard.py` (esta página é
-    # descoberta automaticamente em src/pages/)
+    # registrada no st.navigation de src/dashboard.py)
     import sys
     from pathlib import Path
 

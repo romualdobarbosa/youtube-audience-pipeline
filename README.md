@@ -83,7 +83,7 @@ flowchart LR
 
     API --> CI
     API --> GHA
-    DDB --> ST[Streamlit<br/>src/dashboard.py]
+    DDB --> ST[Streamlit<br/>src/dashboard.py + src/copa.py]
     T --> ST
 ```
 
