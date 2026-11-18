@@ -69,11 +69,11 @@ def table(df: pd.DataFrame) -> None:
     )
 
 
-st.set_page_config(page_title="Copa 2026 — guerra de relevância no YouTube", layout="wide")
+st.set_page_config(page_title="Copa 2026: guerra de relevância no YouTube", layout="wide")
 st.title("Quem ganhou a guerra de relevância no YouTube brasileiro durante a Copa do Mundo 2026?")
 st.caption(
-    "CazéTV, GE TV, N Sports e TNT Sports Brasil — performance por vídeo em 3 janelas: "
-    "Pré-Copa (01/05–10/06), Copa (11/06–19/07) e Pós-Copa (20/07–31/08)."
+    "Performance por vídeo da CazéTV, GE TV, N Sports e TNT Sports Brasil em 3 janelas. "
+    "Pré-Copa (01/05 a 10/06), Copa (11/06 a 19/07) e Pós-Copa (20/07 a 31/08)."
 )
 
 if not DB_PATH.exists():
@@ -86,10 +86,10 @@ if not DB_PATH.exists():
 with st.expander("Por que 3 janelas de publicação, e não uma curva de inscritos?"):
     st.markdown(
         "A YouTube Data API v3 (`channels.list`) só devolve totais **acumulados atuais** "
-        "de inscritos e views — não existe endpoint público com série histórica. Por isso "
+        "de inscritos e views, e não existe endpoint público com série histórica. Por isso "
         "a métrica usada é **performance por vídeo publicado em cada janela** (cadência, "
         "views, engajamento, share of voice), coletada via `playlistItems.list` + "
-        "`videos.list` — não via `search.list`, que custaria ~100x mais cota de API pra "
+        "`videos.list`, e não via `search.list`, que custaria ~100x mais cota de API pra "
         "fazer a mesma coisa."
     )
 

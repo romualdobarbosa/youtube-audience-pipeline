@@ -75,7 +75,7 @@ def table(df: pd.DataFrame) -> None:
 
 
 st.set_page_config(page_title="Podcasts BR no YouTube", layout="wide")
-st.title("Podcasts brasileiros no YouTube — insights")
+st.title("Podcasts brasileiros no YouTube")
 st.caption(
     "Mesmo pipeline de ingestão + dbt da análise principal (Copa 2026), aplicado a "
     "um segundo problema: ranking de canais de podcast."
@@ -121,16 +121,19 @@ st.plotly_chart(
 )
 table(ranked)
 
-# --- Tese: shorts verticais dominam o consumo ---------------------------------
+# --- Shorts vs vídeos longos: catálogo x views ----------------------------------
 st.header("Curtos (verticais) vs Longos (horizontais)")
-st.caption(
-    "Mesmo sendo conteúdo de podcast longo, os shorts costumam capturar uma fatia de "
-    "views muito maior do que sua participação no catálogo."
-)
 if not svl.empty:
     agg = svl.groupby("video_type")[["videos", "total_views"]].sum().reset_index()
     agg["catalog_share"] = agg["videos"] / agg["videos"].sum()
     agg["views_share"] = agg["total_views"] / agg["total_views"].sum()
+    # Texto calculado dos próprios dados, pra nunca contradizer o gráfico.
+    nomes = {"short": "Shorts", "long": "Vídeos longos"}
+    for row in agg.itertuples():
+        st.caption(
+            f"{nomes.get(row.video_type, row.video_type)}: {row.catalog_share:.0%} do catálogo e "
+            f"{row.views_share:.0%} das views."
+        )
     comp = agg.melt(
         id_vars="video_type",
         value_vars=["catalog_share", "views_share"],
