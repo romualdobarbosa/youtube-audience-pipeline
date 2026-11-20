@@ -63,29 +63,7 @@ A CazéTV ficou com 94,9% das views do grupo durante a Copa, quase 12 vezes o qu
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-    API[YouTube Data API v3]
-
-    subgraph copa[Copa 2026, coleta única]
-        CI[copa2026/ingest.py] --> DDB[(DuckDB<br/>data/copa2026.duckdb)]
-        DDB --> DBTC[dbt-duckdb<br/>staging e marts]
-        DBTC --> DDB
-    end
-
-    subgraph pod[Podcasts BR, coleta diária]
-        GHA[src/main.py<br/>no GitHub Actions] --> T[(Turso / libSQL<br/>dims SCD2 e fatos)]
-        T --> R[dbt/sync_replica.py<br/>réplica SQLite local]
-        R --> DBTP[dbt-sqlite<br/>staging e marts]
-        DBTP --> P[dbt/push_marts_to_turso.py]
-        P --> T
-    end
-
-    API --> CI
-    API --> GHA
-    DDB --> ST[Streamlit<br/>src/dashboard.py + src/copa.py]
-    T --> ST
-```
+![Diagrama da arquitetura. A YouTube Data API alimenta duas trilhas. Na da Copa, o copa2026/ingest.py grava num DuckDB commitado no repo e o dbt-duckdb monta os marts no mesmo arquivo. Na dos podcasts, o src/main.py roda no GitHub Actions e grava no Turso, o dbt-sqlite trabalha numa réplica local e devolve os marts pro Turso. As duas trilhas terminam no dashboard Streamlit, e o Airflow aparece à parte, validado só localmente](docs/img/arquitetura.png)
 
 O cliente da API (`src/api.py`) é o mesmo nas duas análises, com retry e backoff exponencial (tenacity) pra erros transitórios. As datas das janelas da Copa ficam em `vars` do dbt, então mudar uma janela pede só um `dbt build` novo, sem recoletar nada. Os detalhes de cada projeto dbt estão em [docs/dbt.md](docs/dbt.md) e os da análise de podcasts em [docs/podcasts.md](docs/podcasts.md).
 
